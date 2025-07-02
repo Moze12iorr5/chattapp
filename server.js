@@ -1,106 +1,104 @@
 const express = require('express');
-const http = require('http');
-const path = require('path');
-const multer = require('multer');
-const bodyParser = require('body-parser');
-const { Server } = require('socket.io');
-
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
+const http = require('http').createServer(app);
+const { Server } = require('socket.io');
+const io = new Server(http);
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
+// === Config ===
+const ADMIN_PASSWORD = 'aAssdddyyui9=+(?s'; // Change this!
 const PORT = process.env.PORT || 3000;
 
-// Storage config for multer - save uploaded images to /uploads
-const upload = multer({ dest: path.join(__dirname, 'uploads/') });
+app.use(express.static('public'));
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
-// Middleware
-app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use(bodyParser.urlencoded({ extended: true }));
+// === Multer (Image Upload) ===
+const uploadDir = path.join(__dirname, 'public/uploads');
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
 
-// Simple in-memory ban list (IP or username)
-const bannedUsers = new Set();
-
-// Simple admin authentication (very basic, replace with real auth in production)
-const ADMIN_PASSWORD = 'GhjyJkuuu??0uifggd';
-
-// Routes for pages
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/index.html'));
-});
-
-app.get('/about', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/about.html'));
-});
-
-app.get('/faq', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/faq.html'));
-});
-
-app.get('/rules', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/rules.html'));
-});
-
-app.get('/contact', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/contact.html'));
-});
-
-// Admin page - simple password check via query param (replace with real auth)
-app.get('/admin', (req, res) => {
-  const password = req.query.password;
-  if (password !== ADMIN_PASSWORD) {
-    return res.status(403).send('Forbidden: Incorrect admin password');
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, 'public/uploads'),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1e9) + ext;
+    cb(null, uniqueName);
   }
-  res.sendFile(path.join(__dirname, 'public/admin.html'));
 });
 
-// Image upload endpoint
-app.post('/upload-image', upload.single('image'), (req, res) => {
-  if (!req.file) return res.status(400).send('No file uploaded');
+const upload = multer({ storage });
 
-  // Return filename so client can build the URL to access image
-  res.json({ filename: req.file.filename });
+// === Routes ===
+app.get('/', (req, res) => res.sendFile(__dirname + '/public/index.html'));
+app.get('/admin', (req, res) => res.sendFile(__dirname + '/public/admin.html'));
+
+app.get('/rules', (req, res) => res.send('<h2>Chat Rules</h2><ul><li>Be respectful</li><li>No spam</li><li>No offensive content</li></ul>'));
+app.get('/faq', (req, res) => res.send('<h2>FAQ</h2><p>Q: Is this chat anonymous?<br>A: Yes</p>'));
+app.get('/about', (req, res) => res.send('<h2>About OmeStarChat</h2><p>A simple anonymous chat platform.</p>'));
+app.get('/contact', (req, res) => res.send('<h2>Contact</h2><p>Email: admin@example.com</p>'));
+
+app.post('/upload', upload.single('image'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
+  res.json({ imageUrl: `/uploads/${req.file.filename}` });
 });
 
-// For contact form submissions
-app.post('/contact', (req, res) => {
-  const { name, email, message } = req.body;
-  console.log('Contact form message:', { name, email, message });
-  // Here you can save this to DB or send email, etc.
-  res.send('Message received! Thanks for contacting us.');
-});
+// === Data ===
+let connectedUsers = {}; // socket.id -> username
+let bannedUsers = new Set();
 
-// Socket.io connection and logic
+// === Socket.io ===
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
-  // You can add IP or username to bannedUsers to disconnect or ignore messages
   socket.on('chat message', (msg) => {
-    if (bannedUsers.has(msg.user)) {
-      socket.emit('banned', 'You are banned from chatting.');
-      return;
-    }
-
-    // Broadcast message to all clients
+    if (bannedUsers.has(msg.user)) return;
     io.emit('chat message', msg);
   });
 
-  // Handle image messages if you want (example):
-  socket.on('image message', (data) => {
-    if (bannedUsers.has(data.user)) {
-      socket.emit('banned', 'You are banned from chatting.');
-      return;
+  socket.on('image upload', (data) => {
+    if (bannedUsers.has(data.user)) return;
+    io.emit('image upload', data);
+  });
+
+  socket.on('username', (username) => {
+    if (!username) return;
+    connectedUsers[socket.id] = username;
+    updateUserList();
+  });
+
+  socket.on('admin login', (password) => {
+    if (password === ADMIN_PASSWORD) {
+      const users = Object.values(connectedUsers).map(name => ({ username: name }));
+      socket.emit('admin auth result', { success: true, users });
+    } else {
+      socket.emit('admin auth result', { success: false });
     }
-    io.emit('image message', data); // broadcast image message
+  });
+
+  socket.on('ban user', (usernameToBan) => {
+    bannedUsers.add(usernameToBan);
+    console.log('User banned:', usernameToBan);
+    io.emit('chat message', { user: 'SYSTEM', text: `${usernameToBan} was banned.` });
+  });
+
+  socket.on('system message', (msg) => {
+    io.emit('chat message', { user: 'SYSTEM', text: msg });
   });
 
   socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
+    delete connectedUsers[socket.id];
+    updateUserList();
   });
+
+  function updateUserList() {
+    const users = Object.values(connectedUsers).map(name => ({ username: name }));
+    io.emit('user list update', users);
+  }
 });
 
-// Start server
-server.listen(PORT, () => {
+// === Start Server ===
+http.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });

@@ -1,27 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Admin Panel</title>
+  <meta charset="UTF-8">
+  <title>Moderator Panel</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #eee;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    #loginForm, #adminPanel {
+      max-width: 400px;
+      margin: 20px auto;
+    }
+
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin: 5px 0;
+    }
+
+    #userList li {
+      margin: 5px 0;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
 </head>
 <body>
-  <h1>Welcome Admin</h1>
-  <a href="/admin-logout">Logout</a>
+  <h1>OmeStar Moderator Panel</h1>
 
-  <h2>Moderate Users</h2>
-  <input id="banInput" placeholder="Username to ban" />
-  <button id="banBtn">Ban User</button>
+  <div id="loginForm">
+    <input type="password" id="adminPassword" placeholder="Enter admin password">
+    <button onclick="login()">Login</button>
+    <p id="loginError" style="color:red;"></p>
+  </div>
+
+  <div id="adminPanel" class="hidden">
+    <h2>Connected Users</h2>
+    <ul id="userList"></ul>
+
+    <h3>Send System Message</h3>
+    <input id="systemMessage" placeholder="Message to all users">
+    <button onclick="sendSystemMessage()">Send</button>
+  </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
+    let isAdmin = false;
 
-    document.getElementById('banBtn').addEventListener('click', () => {
-      const username = document.getElementById('banInput').value.trim();
-      if (username) {
-        socket.emit('ban user', username);
-        alert(`${username} banned.`);
+    function login() {
+      const password = document.getElementById('adminPassword').value;
+      socket.emit('admin login', password);
+    }
+
+    socket.on('admin auth result', (result) => {
+      if (result.success) {
+        isAdmin = true;
+        document.getElementById('loginForm').classList.add('hidden');
+        document.getElementById('adminPanel').classList.remove('hidden');
+        updateUserList(result.users);
+      } else {
+        document.getElementById('loginError').innerText = 'Incorrect password';
       }
+    });
+
+    function updateUserList(users) {
+      const userList = document.getElementById('userList');
+      userList.innerHTML = '';
+      users.forEach((user) => {
+        const li = document.createElement('li');
+        li.textContent = user.username;
+        const banBtn = document.createElement('button');
+        banBtn.textContent = 'Ban';
+        banBtn.style.marginLeft = '10px';
+        banBtn.onclick = () => socket.emit('ban user', user.username);
+        li.appendChild(banBtn);
+        userList.appendChild(li);
+      });
+    }
+
+    function sendSystemMessage() {
+      const msg = document.getElementById('systemMessage').value;
+      if (msg.trim() !== '') {
+        socket.emit('system message', msg);
+        document.getElementById('systemMessage').value = '';
+      }
+    }
+
+    socket.on('user list update', (users) => {
+      if (isAdmin) updateUserList(users);
     });
   </script>
 </body>
