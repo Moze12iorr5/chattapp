@@ -9,9 +9,18 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
   "dependencies": {
     "express": "^5.1.0",
+    "multer": "^2.0.1",
     "socket.io": "^4.8.1"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Moze12iorr5/chattapp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Moze12iorr5/chattapp/issues"
+  },
+  "homepage": "https://github.com/Moze12iorr5/chattapp#readme",
+  "description": ""
 }
