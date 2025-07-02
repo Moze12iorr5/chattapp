@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <title>ChattApp</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>Välkommen till ChattApp</h1>
+
+  <div id="chatbox">
+    <ul id="messages"></ul>
+  </div>
+
+  <form id="form" action="">
+    <input id="input" autocomplete="off" placeholder="Skriv ett meddelande..." />
+    <button>Skicka</button>
+  </form>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="client.js"></script>
+</body>
+</html>
