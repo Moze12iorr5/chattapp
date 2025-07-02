@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Panel</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    ul { max-height: 200px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; }
+    li { margin-bottom: 5px; }
+    button { margin-left: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Admin Panel</h1>
+  <p>Banned users:</p>
+  <ul id="bannedList"></ul>
+
+  <input id="banInput" placeholder="Username to ban" />
+  <button id="banBtn">Ban User</button>
+
+  <input id="unbanInput" placeholder="Username to unban" />
+  <button id="unbanBtn">Unban User</button>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    const bannedList = document.getElementById('bannedList');
+    const banInput = document.getElementById('banInput');
+    const banBtn = document.getElementById('banBtn');
+    const unbanInput = document.getElementById('unbanInput');
+    const unbanBtn = document.getElementById('unbanBtn');
+
+    function updateBannedUsers(users) {
+      bannedList.innerHTML = '';
+      users.forEach(user => {
+        const li = document.createElement('li');
+        li.textContent = user;
+        bannedList.appendChild(li);
+      });
+    }
+
+    socket.on('update banned users', updateBannedUsers);
+
+    banBtn.addEventListener('click', () => {
+      const username = banInput.value.trim();
+      if (username) {
+        socket.emit('admin ban user', username);
+        banInput.value = '';
+      }
+    });
+
+    unbanBtn.addEventListener('click', () => {
+      const username = unbanInput.value.trim();
+      if (username) {
+        socket.emit('admin unban

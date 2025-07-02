@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Login</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 50px; }
+  </style>
+</head>
+<body>
+  <h1>Admin Login</h1>
+  <form id="loginForm">
+    <label>Password: <input type="password" id="adminPass" required /></label>
+    <button type="submit">Login</button>
+  </form>
+  <p id="error" style="color: red;"></p>
+
+  <script>
+    const loginForm = document.getElementById('loginForm');
+    const errorP = document.getElementById('error');
+    loginForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const pass = document.getElementById('adminPass').value;
+      // Simple password check here, change 'admin123' to your secret
+      if (pass === 'admin123') {
+        window.location.href = '/admin-panel';
+      } else {
+        errorP.textContent = 'Incorrect password';
+      }
+    });
+  </script>
+</body>
+</html>

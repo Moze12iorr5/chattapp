@@ -1,94 +1,89 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>OmeStarChat</title>
-<style>
-  body { font-family: Arial, sans-serif; }
-  #messages { list-style: none; max-height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 5px; }
-  #messages li { margin-bottom: 10px; }
-  img.chat-image { max-width: 150px; display: block; margin-top: 5px; }
-</style>
-<script src="/socket.io/socket.io.js"></script>
+  <meta charset="UTF-8" />
+  <title>OmeStarChat</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    #messages { list-style-type: none; padding: 0; max-height: 300px; overflow-y: auto; border: 1px solid #ccc; }
+    #messages li { padding: 5px; border-bottom: 1px solid #eee; }
+    #messages li img { max-width: 200px; max-height: 150px; display: block; margin-top: 5px; }
+    #rules { background: #f9f9f9; border: 1px solid #ddd; padding: 10px; margin-bottom: 15px; }
+  </style>
 </head>
 <body>
-<h1>Welcome to OmeStarChat</h1>
+  <h1>Welcome to OmeStarChat</h1>
 
-<p><a href="rules.html">Rules</a> | <a href="faq.html">FAQ</a> | <a href="about.html">About</a> | <a href="contact.html">Contact</a></p>
+  <div id="rules">
+    <strong>Rules:</strong>
+    <ul>
+      <li>No spamming or offensive language</li>
+      <li>No sharing personal info</li>
+      <li>Respect others</li>
+    </ul>
+  </div>
 
-<ul id="messages"></ul>
+  <ul id="messages"></ul>
 
-<input id="input" autocomplete="off" placeholder="Type your message..." />
-<button id="sendBtn">Send</button>
+  <input id="input" autocomplete="off" placeholder="Type a message" />
+  <button id="sendBtn">Send</button>
 
-<h3>Upload Image</h3>
-<input type="file" id="imageUpload" accept="image/*" />
-<button id="uploadBtn">Upload</button>
+  <hr />
+  <label for="imageUpload">Upload Image:</label>
+  <input type="file" id="imageUpload" accept="image/*" />
 
-<script>
-  const socket = io();
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
 
-  let username = '';
-  while (!username) {
-    username = prompt('Enter your username:').trim();
-  }
-
-  const input = document.getElementById('input');
-  const sendBtn = document.getElementById('sendBtn');
-  const messages = document.getElementById('messages');
-  const imageUpload = document.getElementById('imageUpload');
-  const uploadBtn = document.getElementById('uploadBtn');
-
-  sendBtn.onclick = () => {
-    const text = input.value.trim();
-    if (text !== '') {
-      socket.emit('chat message', { user: username, text });
-      input.value = '';
+    let username = '';
+    while (!username) {
+      username = prompt('Enter your username:').trim();
     }
-  };
 
-  input.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') sendBtn.click();
-  });
+    const input = document.getElementById('input');
+    const sendBtn = document.getElementById('sendBtn');
+    const messages = document.getElementById('messages');
+    const imageUpload = document.getElementById('imageUpload');
 
-  socket.on('chat message', (msg) => {
-    if (msg.image) {
-      const li = document.createElement('li');
-      li.textContent = `${msg.user} sent an image:`;
-      const img = document.createElement('img');
-      img.src = msg.image;
-      img.className = 'chat-image';
-      li.appendChild(img);
-      messages.appendChild(li);
-      messages.scrollTop = messages.scrollHeight;
-    } else {
+    sendBtn.addEventListener('click', () => {
+      if (input.value.trim() !== '') {
+        socket.emit('chat message', { user: username, text: input.value.trim() });
+        input.value = '';
+      }
+    });
+
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendBtn.click();
+    });
+
+    socket.on('chat message', (msg) => {
       const li = document.createElement('li');
       li.textContent = `${msg.user}: ${msg.text}`;
       messages.appendChild(li);
       messages.scrollTop = messages.scrollHeight;
-    }
-  });
+    });
 
-  uploadBtn.onclick = () => {
-    if (imageUpload.files.length === 0) return alert('Please select an image first!');
-    const file = imageUpload.files[0];
-    const formData = new FormData();
-    formData.append('image', file);
+    imageUpload.addEventListener('change', () => {
+      const file = imageUpload.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        socket.emit('image upload', { user: username, imageData: reader.result });
+      };
+      reader.readAsDataURL(file);
+      imageUpload.value = ''; // reset
+    });
 
-    fetch('/upload', {
-      method: 'POST',
-      body: formData
-    }).then(res => {
-      if (!res.ok) throw new Error('Upload failed');
-      return res.json();
-    }).then(data => {
-      socket.emit('chat message', {
-        user: username,
-        text: '',
-        image: `/uploads/${data.filename}`
-      });
-    }).catch(err => alert(err.message));
-  };
-</script>
+    socket.on('image upload', (data) => {
+      const li = document.createElement('li');
+      li.textContent = `${data.user} sent an image:`;
+      const img = document.createElement('img');
+      img.src = data.imageData;
+      li.appendChild(img);
+      messages.appendChild(li);
+      messages.scrollTop = messages.scrollHeight;
+    });
+  </script>
 </body>
 </html>
