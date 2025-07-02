@@ -1,23 +1,69 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="sv">
 <head>
   <meta charset="UTF-8" />
-  <title>ChattApp</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>Chattapp</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: 30px auto; }
+    #chat { display: none; }
+    #messages { list-style-type: none; padding: 0; max-height: 300px; overflow-y: auto; border: 1px solid #ccc; margin-bottom: 10px; }
+    #messages li { padding: 5px 10px; border-bottom: 1px solid #eee; }
+  </style>
 </head>
 <body>
-  <h1>Välkommen till ChattApp</h1>
-
-  <div id="chatbox">
-    <ul id="messages"></ul>
+  <div id="login">
+    <h2>Välj användarnamn</h2>
+    <input type="text" id="usernameInput" placeholder="Skriv ditt namn" />
+    <button id="joinBtn">Gå med i chatten</button>
   </div>
 
-  <form id="form" action="">
-    <input id="input" autocomplete="off" placeholder="Skriv ett meddelande..." />
-    <button>Skicka</button>
-  </form>
+  <div id="chat">
+    <h2>Chatten</h2>
+    <ul id="messages"></ul>
+    <input id="messageInput" autocomplete="off" placeholder="Skriv ett meddelande" />
+    <button id="sendBtn">Skicka</button>
+  </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="client.js"></script>
+  <script>
+    const socket = io();
+
+    const loginDiv = document.getElementById('login');
+    const chatDiv = document.getElementById('chat');
+    const joinBtn = document.getElementById('joinBtn');
+    const usernameInput = document.getElementById('usernameInput');
+    const messages = document.getElementById('messages');
+    const messageInput = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+    let username = '';
+
+    joinBtn.onclick = () => {
+      const name = usernameInput.value.trim();
+      if (name) {
+        username = name;
+        loginDiv.style.display = 'none';
+        chatDiv.style.display = 'block';
+        socket.emit('join', username);
+      } else {
+        alert('Skriv ditt namn!');
+      }
+    };
+
+    sendBtn.onclick = () => {
+      const msg = messageInput.value.trim();
+      if (msg) {
+        socket.emit('chat message', { username, message: msg });
+        messageInput.value = '';
+      }
+    };
+
+    socket.on('chat message', ({ username, message }) => {
+      const li = document.createElement('li');
+      li.textContent = `${username}: ${message}`;
+      messages.appendChild(li);
+      messages.scrollTop = messages.scrollHeight;
+    });
+  </script>
 </body>
 </html>
