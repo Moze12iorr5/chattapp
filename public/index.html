@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Chattapp med regler</title>
+  <title>Chat App with Image Upload</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       margin: 20px;
     }
     #messages {
-      list-style-type: none;
+      list-style: none;
       padding: 0;
       max-height: 300px;
       overflow-y: auto;
@@ -20,61 +20,76 @@
     #messages li {
       padding: 5px 10px;
       border-bottom: 1px solid #eee;
+      word-wrap: break-word;
     }
-    #input, #sendBtn {
+    #messages img {
+      max-width: 200px;
+      display: block;
+      margin-top: 5px;
+      border-radius: 4px;
+    }
+    #input, #sendBtn, #imageInput {
       font-size: 1rem;
       padding: 10px;
     }
     #input {
-      width: 70%;
+      width: 60%;
       box-sizing: border-box;
     }
     #sendBtn {
-      width: 25%;
+      width: 15%;
       cursor: pointer;
     }
-    h2 {
-      margin-bottom: 5px;
+    #imageInput {
+      width: 20%;
+      cursor: pointer;
+    }
+    label {
+      display: block;
+      margin-bottom: 10px;
     }
   </style>
 </head>
 <body>
-  <h2>Chat Rules / Regler</h2>
+
+  <h2>Chat Rules</h2>
   <ul>
-    <li>Be respectful</li>
+    <li>Be respectful to others</li>
     <li>No spam or advertising</li>
-    <li>No offensive language/image</li>
+    <li>No offensive language or images</li>
   </ul>
 
   <label>
     <input type="checkbox" id="acceptRules" />
-    I accept the chat rules / Jag accepterar reglerna
+    I accept the chat rules
   </label>
 
-  <br /><br />
-
   <ul id="messages"></ul>
-  <input id="input" autocomplete="off" placeholder="Type a message / Skriv ett meddelande" disabled />
-  <button id="sendBtn" disabled>Send / Skicka</button>
+
+  <input id="input" autocomplete="off" placeholder="Type a message" disabled />
+  <button id="sendBtn" disabled>Send</button>
+  <input type="file" id="imageInput" accept="image/*" disabled />
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
 
-    const acceptRulesCheckbox = document.getElementById('acceptRules');
+    const acceptRules = document.getElementById('acceptRules');
     const input = document.getElementById('input');
     const sendBtn = document.getElementById('sendBtn');
+    const imageInput = document.getElementById('imageInput');
     const messages = document.getElementById('messages');
 
-    acceptRulesCheckbox.addEventListener('change', () => {
-      const accepted = acceptRulesCheckbox.checked;
-      input.disabled = !accepted;
-      sendBtn.disabled = !accepted;
+    acceptRules.addEventListener('change', () => {
+      const enabled = acceptRules.checked;
+      input.disabled = !enabled;
+      sendBtn.disabled = !enabled;
+      imageInput.disabled = !enabled;
     });
 
     sendBtn.addEventListener('click', () => {
-      if (input.value) {
-        socket.emit('chat message', input.value);
+      if (input.value.trim() !== '') {
+        socket.emit('chat message', input.value.trim());
         input.value = '';
       }
     });
@@ -85,12 +100,35 @@
       }
     });
 
+    imageInput.addEventListener('change', () => {
+      const file = imageInput.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        socket.emit('image', reader.result);
+      };
+      reader.readAsDataURL(file);
+
+      imageInput.value = '';
+    });
+
     socket.on('chat message', (msg) => {
       const li = document.createElement('li');
       li.textContent = msg;
       messages.appendChild(li);
       messages.scrollTop = messages.scrollHeight;
     });
+
+    socket.on('image', (imgData) => {
+      const li = document.createElement('li');
+      const img = document.createElement('img');
+      img.src = imgData;
+      li.appendChild(img);
+      messages.appendChild(li);
+      messages.scrollTop = messages.scrollHeight;
+    });
   </script>
+
 </body>
 </html>

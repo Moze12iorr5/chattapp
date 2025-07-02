@@ -2,26 +2,30 @@ const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
+const path = require('path');
 
-app.use(express.static('public'));
+// Serve static files from the 'public' folder
+app.use(express.static(path.join(__dirname, 'public')));
 
 io.on('connection', (socket) => {
   console.log('A user connected');
 
-  socket.on('chat message', (data) => {
-    io.emit('chat message', data);
+  // Handle text messages
+  socket.on('chat message', (msg) => {
+    io.emit('chat message', msg);
   });
 
-  socket.on('image', (data) => {
-    io.emit('image', data);
+  // Handle image uploads (base64 strings)
+  socket.on('image', (imgData) => {
+    io.emit('image', imgData);
   });
 
   socket.on('disconnect', () => {
-    console.log('A user disconnected');
+    console.log('User disconnected');
   });
 });
 
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
