@@ -2,47 +2,64 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Contact - OmeStarChat</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  form { max-width: 400px; }
+  input, textarea { width: 100%; padding: 8px; margin-bottom: 10px; }
+  button { padding: 8px 16px; }
+  #msg { margin-top: 10px; }
+</style>
 </head>
 <body>
-<h1>Contact</h1>
-<p>If you have questions, issues, or want to report something, send a message here:</p>
+
+<h1>Contact Us</h1>
 
 <form id="contactForm">
-  <label for="name">Name:</label><br />
-  <input type="text" id="name" name="name" required /><br /><br />
-  
-  <label for="email">Email:</label><br />
-  <input type="email" id="email" name="email" required /><br /><br />
-  
-  <label for="message">Message:</label><br />
-  <textarea id="message" name="message" rows="5" required></textarea><br /><br />
-  
+  <input type="email" id="email" placeholder="Your email" required />
+  <textarea id="message" rows="5" placeholder="Your message" required></textarea>
   <button type="submit">Send</button>
 </form>
 
-<p id="response"></p>
+<p id="msg"></p>
 
 <script>
-  document.getElementById('contactForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const name = e.target.name.value.trim();
-    const email = e.target.email.value.trim();
-    const message = e.target.message.value.trim();
+  const form = document.getElementById('contactForm');
+  const msgP = document.getElementById('msg');
 
-    if(!name || !email || !message) {
-      alert('Please fill all fields!');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('email').value.trim();
+    const message = document.getElementById('message').value.trim();
+
+    if (!email || !message) {
+      msgP.style.color = 'red';
+      msgP.textContent = 'Please fill out all fields.';
       return;
     }
 
-    // Here you can add backend API call to send email or save messages
-    // For demo, just show confirmation:
-    document.getElementById('response').textContent = "Thank you for your message! We will get back to you soon.";
-    
-    e.target.reset();
+    try {
+      const res = await fetch('/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, message }),
+      });
+
+      const text = await res.text();
+      if (res.ok) {
+        msgP.style.color = 'green';
+        msgP.textContent = text;
+        form.reset();
+      } else {
+        throw new Error(text);
+      }
+    } catch (err) {
+      msgP.style.color = 'red';
+      msgP.textContent = 'Failed to send message.';
+    }
   });
 </script>
 
-<p><a href="index.html">Back to Chat</a></p>
 </body>
 </html>

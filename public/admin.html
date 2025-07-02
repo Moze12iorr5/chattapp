@@ -1,105 +1,83 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Moderator Panel</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #111;
-      color: #eee;
-      padding: 20px;
-    }
-
-    h1 {
-      text-align: center;
-    }
-
-    #loginForm, #adminPanel {
-      max-width: 400px;
-      margin: 20px auto;
-    }
-
-    input, button {
-      width: 100%;
-      padding: 10px;
-      margin: 5px 0;
-    }
-
-    #userList li {
-      margin: 5px 0;
-    }
-
-    .hidden {
-      display: none;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Admin Panel - OmeStarChat</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  #loginSection, #moderationSection { max-width: 400px; }
+  #userToBan { width: 100%; padding: 8px; margin-bottom: 8px; }
+</style>
 </head>
 <body>
-  <h1>OmeStar Moderator Panel</h1>
 
-  <div id="loginForm">
-    <input type="password" id="adminPassword" placeholder="Enter admin password">
-    <button onclick="login()">Login</button>
-    <p id="loginError" style="color:red;"></p>
-  </div>
+<h1>Admin Panel - OmeStarChat</h1>
 
-  <div id="adminPanel" class="hidden">
-    <h2>Connected Users</h2>
-    <ul id="userList"></ul>
+<div id="loginSection">
+  <h2>Login</h2>
+  <input type="password" id="password" placeholder="Enter admin password" />
+  <button id="loginBtn">Login</button>
+  <p id="loginMsg" style="color:red;"></p>
+</div>
 
-    <h3>Send System Message</h3>
-    <input id="systemMessage" placeholder="Message to all users">
-    <button onclick="sendSystemMessage()">Send</button>
-  </div>
+<div id="moderationSection" style="display:none;">
+  <h2>Moderate Users</h2>
+  <input id="userToBan" placeholder="Username to ban" />
+  <button id="banBtn">Ban User</button>
+  <p id="banMsg" style="color:green;"></p>
+</div>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
-    let isAdmin = false;
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
 
-    function login() {
-      const password = document.getElementById('adminPassword').value;
-      socket.emit('admin login', password);
-    }
+  const loginSection = document.getElementById('loginSection');
+  const moderationSection = document.getElementById('moderationSection');
+  const loginBtn = document.getElementById('loginBtn');
+  const passwordInput = document.getElementById('password');
+  const loginMsg = document.getElementById('loginMsg');
 
-    socket.on('admin auth result', (result) => {
-      if (result.success) {
-        isAdmin = true;
-        document.getElementById('loginForm').classList.add('hidden');
-        document.getElementById('adminPanel').classList.remove('hidden');
-        updateUserList(result.users);
+  const userToBanInput = document.getElementById('userToBan');
+  const banBtn = document.getElementById('banBtn');
+  const banMsg = document.getElementById('banMsg');
+
+  loginBtn.onclick = () => {
+    const password = passwordInput.value.trim();
+    if (!password) return alert('Enter password');
+
+    fetch('/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    })
+    .then(res => {
+      if (res.status === 200) return res.json();
+      throw new Error('Wrong password');
+    })
+    .then(data => {
+      if (data.success) {
+        loginSection.style.display = 'none';
+        moderationSection.style.display = 'block';
+        socket.emit('join', 'admin');
       } else {
-        document.getElementById('loginError').innerText = 'Incorrect password';
+        loginMsg.textContent = 'Wrong password';
       }
+    })
+    .catch(err => {
+      loginMsg.textContent = err.message;
     });
+  };
 
-    function updateUserList(users) {
-      const userList = document.getElementById('userList');
-      userList.innerHTML = '';
-      users.forEach((user) => {
-        const li = document.createElement('li');
-        li.textContent = user.username;
-        const banBtn = document.createElement('button');
-        banBtn.textContent = 'Ban';
-        banBtn.style.marginLeft = '10px';
-        banBtn.onclick = () => socket.emit('ban user', user.username);
-        li.appendChild(banBtn);
-        userList.appendChild(li);
-      });
-    }
+  banBtn.onclick = () => {
+    const username = userToBanInput.value.trim();
+    if (!username) return alert('Enter username');
 
-    function sendSystemMessage() {
-      const msg = document.getElementById('systemMessage').value;
-      if (msg.trim() !== '') {
-        socket.emit('system message', msg);
-        document.getElementById('systemMessage').value = '';
-      }
-    }
+    socket.emit('ban user', username);
+    banMsg.textContent = `User "${username}" has been banned.`;
+    userToBanInput.value = '';
+  };
+</script>
 
-    socket.on('user list update', (users) => {
-      if (isAdmin) updateUserList(users);
-    });
-  </script>
 </body>
 </html>

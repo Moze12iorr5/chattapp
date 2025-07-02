@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Truth or Dare Chat</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; max-width: 600px; }
+    #messages { border: 1px solid #ccc; height: 300px; overflow-y: auto; padding: 10px; margin-bottom: 10px; }
+    #input { width: 70%; padding: 10px; }
+    #sendBtn, #truthBtn, #dareBtn { padding: 10px 15px; margin-left: 5px; cursor: pointer; }
+    #truthBtn, #dareBtn { margin-top: 10px; }
+    #usernameDisplay { font-weight: bold; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Truth or Dare Chat</h1>
+  <div id="usernameDisplay"></div>
+
+  <div id="messages"></div>
+
+  <input id="input" placeholder="Type your chat message..." autocomplete="off" />
+  <button id="sendBtn">Send</button>
+
+  <div>
+    <button id="truthBtn">Truth</button>
+    <button id="dareBtn">Dare</button>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    let username = '';
+    while (!username) {
+      username = prompt('Enter your username:').trim();
+    }
+    document.getElementById('usernameDisplay').textContent = 'Logged in as: ' + username;
+
+    const input = document.getElementById('input');
+    const sendBtn = document.getElementById('sendBtn');
+    const messages = document.getElementById('messages');
+    const truthBtn = document.getElementById('truthBtn');
+    const dareBtn = document.getElementById('dareBtn');
+
+    sendBtn.onclick = () => {
+      const text = input.value.trim();
+      if(text) {
+        socket.emit('chat message', { user: username, text });
+        input.value = '';
+      }
+    };
+
+    input.addEventListener('keypress', (e) => {
+      if(e.key === 'Enter') sendBtn.click();
+    });
+
+    socket.on('chat message', msg => {
+      const el = document.createElement('div');
+      el.textContent = `${msg.user}: ${msg.text}`;
+      messages.appendChild(el);
+      messages.scrollTop = messages.scrollHeight;
+    });
+
+    truthBtn.onclick = () => {
+      socket.emit('request prompt', { user: username, type: 'truth' });
+    };
+
+    dareBtn.onclick = () => {
+      socket.emit('request prompt', { user: username, type: 'dare' });
+    };
+
+    socket.on('prompt', data => {
+      const el = document.createElement('div');
+      el.style.fontWeight = 'bold';
+      el.textContent = `${data.user}, your ${data.type.toUpperCase()} is: ${data.prompt}`;
+      messages.appendChild(el);
+      messages.scrollTop = messages.scrollHeight;
+    });
+  </script>
+</body>
+</html>
