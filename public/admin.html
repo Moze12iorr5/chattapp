@@ -2,22 +2,27 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Admin Panel - OmeStarChat</title>
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 600px; margin: auto; }
-    input, button { margin: 5px 0; padding: 5px; }
-  </style>
+  <title>Admin Panel</title>
 </head>
 <body>
-  <h1>Admin Panel</h1>
-  <p>Type username to ban:</p>
+  <h1>Welcome Admin</h1>
+  <a href="/admin-logout">Logout</a>
+
+  <h2>Moderate Users</h2>
   <input id="banInput" placeholder="Username to ban" />
   <button id="banBtn">Ban User</button>
 
-  <h3>Banned users:</h3>
-  <ul id="bannedList"></ul>
-
   <script src="/socket.io/socket.io.js"></script>
-  <script src="admin.js"></script>
+  <script>
+    const socket = io();
+
+    document.getElementById('banBtn').addEventListener('click', () => {
+      const username = document.getElementById('banInput').value.trim();
+      if (username) {
+        socket.emit('ban user', username);
+        alert(`${username} banned.`);
+      }
+    });
+  </script>
 </body>
 </html>
