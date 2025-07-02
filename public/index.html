@@ -1,70 +1,95 @@
 <!DOCTYPE html>
-<html>
+<html lang="sv">
 <head>
-  <title>Chat App with Images</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chattapp med regler</title>
   <style>
-    #messages { list-style-type: none; padding: 0; max-height: 300px; overflow-y: scroll; }
-    #messages li { margin-bottom: 10px; }
-    img { max-width: 200px; border: 1px solid #ccc; border-radius: 5px; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    #messages {
+      list-style-type: none;
+      padding: 0;
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      margin-bottom: 10px;
+    }
+    #messages li {
+      padding: 5px 10px;
+      border-bottom: 1px solid #eee;
+    }
+    #input, #sendBtn {
+      font-size: 1rem;
+      padding: 10px;
+    }
+    #input {
+      width: 70%;
+      box-sizing: border-box;
+    }
+    #sendBtn {
+      width: 25%;
+      cursor: pointer;
+    }
+    h2 {
+      margin-bottom: 5px;
+    }
   </style>
 </head>
 <body>
-  <h1>Chat App with Images</h1>
+  <h2>Chat Rules / Regler</h2>
+  <ul>
+    <li>Be respectful</li>
+    <li>No spam or advertising</li>
+    <li>No offensive language/image</li>
+  </ul>
+
+  <label>
+    <input type="checkbox" id="acceptRules" />
+    I accept the chat rules / Jag accepterar reglerna
+  </label>
+
+  <br /><br />
+
   <ul id="messages"></ul>
-
-  <input id="username" placeholder="Your name" /><br><br>
-
-  <input id="input" autocomplete="off" placeholder="Type a message" /><button id="sendBtn">Send</button>
-  <br><br>
-  <input type="file" id="imageInput" accept="image/*" />
-  <button id="sendImageBtn">Send Image</button>
+  <input id="input" autocomplete="off" placeholder="Type a message / Skriv ett meddelande" disabled />
+  <button id="sendBtn" disabled>Send / Skicka</button>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
 
-    const messages = document.getElementById('messages');
+    const acceptRulesCheckbox = document.getElementById('acceptRules');
     const input = document.getElementById('input');
     const sendBtn = document.getElementById('sendBtn');
-    const usernameInput = document.getElementById('username');
-    const imageInput = document.getElementById('imageInput');
-    const sendImageBtn = document.getElementById('sendImageBtn');
+    const messages = document.getElementById('messages');
 
-    function addMessage(html) {
-      const li = document.createElement('li');
-      li.innerHTML = html;
-      messages.appendChild(li);
-      messages.scrollTop = messages.scrollHeight;
-    }
-
-    sendBtn.onclick = () => {
-      const username = usernameInput.value.trim();
-      const message = input.value.trim();
-      if (!username) return alert("Please enter your name!");
-      if (!message) return;
-      socket.emit('chat message', { username, message });
-      input.value = '';
-    };
-
-    sendImageBtn.onclick = () => {
-      const username = usernameInput.value.trim();
-      const file = imageInput.files[0];
-      if (!username) return alert("Please enter your name!");
-      if (!file) return alert("Please select an image first!");
-      const reader = new FileReader();
-      reader.onload = () => {
-        socket.emit('image', { username, imageData: reader.result });
-        imageInput.value = '';
-      };
-      reader.readAsDataURL(file);
-    };
-
-    socket.on('chat message', ({ username, message }) => {
-      addMessage(`<b>${username}:</b> ${message}`);
+    acceptRulesCheckbox.addEventListener('change', () => {
+      const accepted = acceptRulesCheckbox.checked;
+      input.disabled = !accepted;
+      sendBtn.disabled = !accepted;
     });
 
-    socket.on('image', ({ username, imageData }) => {
-      addMessage(`<b>${username} sent an image:</b><br><img src="${imageData}" />`);
+    sendBtn.addEventListener('click', () => {
+      if (input.value) {
+        socket.emit('chat message', input.value);
+        input.value = '';
+      }
+    });
+
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !sendBtn.disabled) {
+        sendBtn.click();
+      }
+    });
+
+    socket.on('chat message', (msg) => {
+      const li = document.createElement('li');
+      li.textContent = msg;
+      messages.appendChild(li);
+      messages.scrollTop = messages.scrollHeight;
     });
   </script>
 </body>
