@@ -1,68 +1,70 @@
-<<!DOCTYPE html>
-<html lang="sv">
+<!DOCTYPE html>
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Chattapp</title>
+  <title>Chat App with Images</title>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 600px; margin: 30px auto; }
-    #chat { display: none; }
-    #messages { list-style-type: none; padding: 0; max-height: 300px; overflow-y: auto; border: 1px solid #ccc; margin-bottom: 10px; }
-    #messages li { padding: 5px 10px; border-bottom: 1px solid #eee; }
+    #messages { list-style-type: none; padding: 0; max-height: 300px; overflow-y: scroll; }
+    #messages li { margin-bottom: 10px; }
+    img { max-width: 200px; border: 1px solid #ccc; border-radius: 5px; }
   </style>
 </head>
 <body>
-  <div id="login">
-    <h2>Välj användarnamn</h2>
-    <input type="text" id="usernameInput" placeholder="Skriv ditt namn" />
-    <button id="joinBtn">Gå med i chatten</button>
-  </div>
+  <h1>Chat App with Images</h1>
+  <ul id="messages"></ul>
 
-  <div id="chat">
-    <h2>Chatten</h2>
-    <ul id="messages"></ul>
-    <input id="messageInput" autocomplete="off" placeholder="Skriv ett meddelande" />
-    <button id="sendBtn">Skicka</button>
-  </div>
+  <input id="username" placeholder="Your name" /><br><br>
+
+  <input id="input" autocomplete="off" placeholder="Type a message" /><button id="sendBtn">Send</button>
+  <br><br>
+  <input type="file" id="imageInput" accept="image/*" />
+  <button id="sendImageBtn">Send Image</button>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
 
-    const loginDiv = document.getElementById('login');
-    const chatDiv = document.getElementById('chat');
-    const joinBtn = document.getElementById('joinBtn');
-    const usernameInput = document.getElementById('usernameInput');
     const messages = document.getElementById('messages');
-    const messageInput = document.getElementById('messageInput');
+    const input = document.getElementById('input');
     const sendBtn = document.getElementById('sendBtn');
+    const usernameInput = document.getElementById('username');
+    const imageInput = document.getElementById('imageInput');
+    const sendImageBtn = document.getElementById('sendImageBtn');
 
-    let username = '';
-
-    joinBtn.onclick = () => {
-      const name = usernameInput.value.trim();
-      if (name) {
-        username = name;
-        loginDiv.style.display = 'none';
-        chatDiv.style.display = 'block';
-        socket.emit('join', username);
-      } else {
-        alert('Skriv ditt namn!');
-      }
-    };
+    function addMessage(html) {
+      const li = document.createElement('li');
+      li.innerHTML = html;
+      messages.appendChild(li);
+      messages.scrollTop = messages.scrollHeight;
+    }
 
     sendBtn.onclick = () => {
-      const msg = messageInput.value.trim();
-      if (msg) {
-        socket.emit('chat message', { username, message: msg });
-        messageInput.value = '';
-      }
+      const username = usernameInput.value.trim();
+      const message = input.value.trim();
+      if (!username) return alert("Please enter your name!");
+      if (!message) return;
+      socket.emit('chat message', { username, message });
+      input.value = '';
+    };
+
+    sendImageBtn.onclick = () => {
+      const username = usernameInput.value.trim();
+      const file = imageInput.files[0];
+      if (!username) return alert("Please enter your name!");
+      if (!file) return alert("Please select an image first!");
+      const reader = new FileReader();
+      reader.onload = () => {
+        socket.emit('image', { username, imageData: reader.result });
+        imageInput.value = '';
+      };
+      reader.readAsDataURL(file);
     };
 
     socket.on('chat message', ({ username, message }) => {
-      const li = document.createElement('li');
-      li.textContent = `${username}: ${message}`;
-      messages.appendChild(li);
-      messages.scrollTop = messages.scrollHeight;
+      addMessage(`<b>${username}:</b> ${message}`);
+    });
+
+    socket.on('image', ({ username, imageData }) => {
+      addMessage(`<b>${username} sent an image:</b><br><img src="${imageData}" />`);
     });
   </script>
 </body>

@@ -3,26 +3,25 @@ const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 
-const port = process.env.PORT || 3000;
-
-app.use(express.static(__dirname));
-
-app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/index.html');
-});
+app.use(express.static('public'));
 
 io.on('connection', (socket) => {
-  console.log('En användare anslöt');
+  console.log('A user connected');
 
-  socket.on('chat message', (msg) => {
-    io.emit('chat message', msg);
+  socket.on('chat message', (data) => {
+    io.emit('chat message', data);
+  });
+
+  socket.on('image', (data) => {
+    io.emit('image', data);
   });
 
   socket.on('disconnect', () => {
-    console.log('En användare kopplade från');
+    console.log('A user disconnected');
   });
 });
 
-http.listen(port, () => {
-  console.log(`Servern körs på http://localhost:${port}`);
+const PORT = process.env.PORT || 3000;
+http.listen(PORT, () => {
+  console.log(`Server running at http://localhost:${PORT}`);
 });
