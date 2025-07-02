@@ -1,59 +1,47 @@
 <!DOCTYPE html>
-<html lang="en" >
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Chat with Username, Images, Videos & Rules</title>
+  <title>OmeStarChat — Free Online Chat</title>
+  <meta name="description" content="OmeStarChat is a free, simple chat app where you can instantly connect and chat with friends online, upload images and chat with usernames." />
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    #rules {
-      background: #f9f9f9; border: 1px solid #ccc; padding: 10px; margin-bottom: 15px;
-    }
-    #messages {
-      list-style-type: none; padding: 0; max-height: 350px; overflow-y: auto; border: 1px solid #ccc; margin-bottom: 10px;
-    }
-    #messages li {
-      padding: 5px 10px; margin-bottom: 5px; border-radius: 5px;
-    }
-    #messages li:nth-child(odd) { background: #eee; }
-    .msg-user { font-weight: bold; margin-right: 5px; }
-    .msg-text { display: inline; }
-    img, video {
-      max-width: 200px; max-height: 150px; display: block; margin-top: 5px; border-radius: 5px;
-    }
-    #input, #mediaUrl {
-      width: 70%; padding: 10px; margin-right: 5px;
-    }
-    #sendBtn, #sendMediaBtn {
-      padding: 10px;
-    }
-    #media-section {
-      margin-bottom: 15px;
-    }
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 1em; background: #f4f4f9; }
+    h1, h2 { color: #333; }
+    #messages { height: 300px; border: 1px solid #ccc; padding: 10px; overflow-y: scroll; background: white; }
+    li { margin-bottom: 0.5em; }
+    #chatControls { margin-top: 1em; }
+    input[type="text"] { width: 70%; padding: 0.5em; }
+    input[type="file"] { margin-left: 1em; }
+    button { padding: 0.5em 1em; margin-left: 1em; }
+    section { margin-bottom: 2em; }
   </style>
 </head>
 <body>
-  <h1>Welcome to the Chat!</h1>
 
-  <div id="rules">
-    <h3>Chat Rules:</h3>
+  <section id="intro">
+    <h1>Welcome to OmeStarChat</h1>
+    <p>A free, simple chat app where you can connect instantly, chat with usernames, and upload images!</p>
+  </section>
+
+  <section id="rules">
+    <h2>Chat Rules</h2>
     <ul>
       <li>Be respectful to others.</li>
-      <li>No spamming or flooding the chat.</li>
-      <li>No offensive language or content.</li>
-      <li>Images/videos must be appropriate.</li>
+      <li>No spamming or advertising.</li>
+      <li>No hate speech or harassment.</li>
+      <li>Keep conversations appropriate for all ages.</li>
+      <li>Have fun and be kind!</li>
     </ul>
-  </div>
+  </section>
 
   <ul id="messages"></ul>
 
-  <input id="input" autocomplete="off" placeholder="Type a message..." />
-  <button id="sendBtn">Send</button>
-
-  <div id="media-section">
-    <input id="mediaUrl" placeholder="Image or video URL" />
-    <button id="sendMediaBtn">Send Image/Video</button>
-  </div>
+  <section id="chatControls">
+    <input id="input" autocomplete="off" placeholder="Type your message..." />
+    <input type="file" id="imageUpload" accept="image/*" />
+    <button id="sendBtn">Send</button>
+  </section>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
@@ -67,45 +55,22 @@
     const input = document.getElementById('input');
     const sendBtn = document.getElementById('sendBtn');
     const messages = document.getElementById('messages');
-    const mediaUrl = document.getElementById('mediaUrl');
-    const sendMediaBtn = document.getElementById('sendMediaBtn');
+    const imageUpload = document.getElementById('imageUpload');
 
-    function appendMessage(msg) {
+    function addMessage(msg) {
       const li = document.createElement('li');
-      const userSpan = document.createElement('span');
-      userSpan.className = 'msg-user';
-      userSpan.textContent = msg.user + ': ';
-
-      li.appendChild(userSpan);
-
-      if (msg.type === 'text') {
-        const textSpan = document.createElement('span');
-        textSpan.className = 'msg-text';
-        textSpan.textContent = msg.text;
-        li.appendChild(textSpan);
-      } else if (msg.type === 'image') {
-        const img = document.createElement('img');
-        img.src = msg.url;
-        img.alt = 'User image';
-        li.appendChild(img);
-      } else if (msg.type === 'video') {
-        const video = document.createElement('video');
-        video.src = msg.url;
-        video.controls = true;
-        li.appendChild(video);
+      if (msg.type === 'image') {
+        li.innerHTML = `<strong>${msg.user}:</strong><br><img src="${msg.text}" style="max-width:200px; max-height:200px;" />`;
+      } else {
+        li.textContent = `${msg.user}: ${msg.text}`;
       }
-
       messages.appendChild(li);
       messages.scrollTop = messages.scrollHeight;
     }
 
     sendBtn.addEventListener('click', () => {
       if (input.value.trim() !== '') {
-        socket.emit('chat message', {
-          user: username,
-          type: 'text',
-          text: input.value.trim(),
-        });
+        socket.emit('chat message', { user: username, text: input.value.trim(), type: 'text' });
         input.value = '';
       }
     });
@@ -114,38 +79,20 @@
       if (e.key === 'Enter') sendBtn.click();
     });
 
-    sendMediaBtn.addEventListener('click', () => {
-      const url = mediaUrl.value.trim();
-      if (!url) return;
+    imageUpload.addEventListener('change', () => {
+      const file = imageUpload.files[0];
+      if (!file) return;
 
-      // Basic check for image or video url by extension
-      const lower = url.toLowerCase();
-      if (
-        lower.match(/\.(jpeg|jpg|gif|png|bmp|webp)$/)
-      ) {
-        socket.emit('chat message', {
-          user: username,
-          type: 'image',
-          url,
-        });
-      } else if (
-        lower.match(/\.(mp4|webm|ogg|mov|avi)$/)
-      ) {
-        socket.emit('chat message', {
-          user: username,
-          type: 'video',
-          url,
-        });
-      } else {
-        alert('URL is not recognized as an image or video.');
-        return;
-      }
-
-      mediaUrl.value = '';
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        socket.emit('chat message', { user: username, text: evt.target.result, type: 'image' });
+      };
+      reader.readAsDataURL(file);
+      imageUpload.value = '';
     });
 
     socket.on('chat message', (msg) => {
-      appendMessage(msg);
+      addMessage(msg);
     });
   </script>
 </body>
