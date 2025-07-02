@@ -2,98 +2,117 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>OmeStarChat — Free Online Chat</title>
-  <meta name="description" content="OmeStarChat is a free, simple chat app where you can instantly connect and chat with friends online, upload images and chat with usernames." />
+  <title>Welcome OmeStarChat</title>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 1em; background: #f4f4f9; }
-    h1, h2 { color: #333; }
-    #messages { height: 300px; border: 1px solid #ccc; padding: 10px; overflow-y: scroll; background: white; }
-    li { margin-bottom: 0.5em; }
-    #chatControls { margin-top: 1em; }
-    input[type="text"] { width: 70%; padding: 0.5em; }
-    input[type="file"] { margin-left: 1em; }
-    button { padding: 0.5em 1em; margin-left: 1em; }
-    section { margin-bottom: 2em; }
+    body { font-family: Arial, sans-serif; max-width: 700px; margin: 20px auto; }
+    nav a { margin: 0 10px; }
+    #messages { list-style-type: none; padding: 0; height: 300px; overflow-y: scroll; border: 1px solid #ccc; }
+    #messages li { padding: 5px; border-bottom: 1px solid #eee; }
+    #messages li img { max-width: 150px; max-height: 150px; }
   </style>
 </head>
 <body>
+  <nav>
+    <a href="/">Chat</a> | 
+    <a href="/about">About</a> | 
+    <a href="/faq">FAQ</a> | 
+    <a href="/rules">Rules</a> | 
+    <a href="/contact">Contact</a>
+  </nav>
 
-  <section id="intro">
-    <h1>Welcome to OmeStarChat</h1>
-    <p>A free, simple chat app where you can connect instantly, chat with usernames, and upload images!</p>
-  </section>
-
-  <section id="rules">
-    <h2>Chat Rules</h2>
-    <ul>
-      <li>Be respectful to others.</li>
-      <li>No spamming or advertising.</li>
-      <li>No hate speech or harassment.</li>
-      <li>Keep conversations appropriate for all ages.</li>
-      <li>Have fun and be kind!</li>
-    </ul>
-  </section>
+  <h1>Welcome OmeStarChat</h1>
 
   <ul id="messages"></ul>
 
-  <section id="chatControls">
-    <input id="input" autocomplete="off" placeholder="Type your message..." />
-    <input type="file" id="imageUpload" accept="image/*" />
-    <button id="sendBtn">Send</button>
-  </section>
+  <input id="input" autocomplete="off" placeholder="Type message here..." />
+  <button id="sendBtn">Send</button>
+
+  <hr>
+
+  <input type="file" id="imageInput" accept="image/*" />
+  <button id="uploadBtn">Upload Image</button>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
 
     let username = '';
-    while (!username) {
+    while(!username) {
       username = prompt('Enter your username:').trim();
     }
+
+    socket.emit('join', username);
+
+    socket.on('banned', () => {
+      alert('You are banned from this chat.');
+      window.location.reload();
+    });
 
     const input = document.getElementById('input');
     const sendBtn = document.getElementById('sendBtn');
     const messages = document.getElementById('messages');
-    const imageUpload = document.getElementById('imageUpload');
+    const imageInput = document.getElementById('imageInput');
+    const uploadBtn = document.getElementById('uploadBtn');
 
-    function addMessage(msg) {
-      const li = document.createElement('li');
-      if (msg.type === 'image') {
-        li.innerHTML = `<strong>${msg.user}:</strong><br><img src="${msg.text}" style="max-width:200px; max-height:200px;" />`;
-      } else {
-        li.textContent = `${msg.user}: ${msg.text}`;
-      }
-      messages.appendChild(li);
-      messages.scrollTop = messages.scrollHeight;
-    }
-
-    sendBtn.addEventListener('click', () => {
-      if (input.value.trim() !== '') {
-        socket.emit('chat message', { user: username, text: input.value.trim(), type: 'text' });
+    sendBtn.onclick = () => {
+      const text = input.value.trim();
+      if(text) {
+        socket.emit('chat message', text);
         input.value = '';
       }
-    });
+    };
 
-    input.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') sendBtn.click();
-    });
-
-    imageUpload.addEventListener('change', () => {
-      const file = imageUpload.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        socket.emit('chat message', { user: username, text: evt.target.result, type: 'image' });
-      };
-      reader.readAsDataURL(file);
-      imageUpload.value = '';
+    input.addEventListener('keypress', e => {
+      if(e.key === 'Enter') sendBtn.click();
     });
 
     socket.on('chat message', (msg) => {
-      addMessage(msg);
+      const li = document.createElement('li');
+      li.textContent = `${msg.user}: ${msg.text}`;
+      messages.appendChild(li);
+      messages.scrollTop = messages.scrollHeight;
     });
+
+    socket.on('chat image', (msg) => {
+      const li = document.createElement('li');
+      li.innerHTML = `${msg.user}: <br><img src="${msg.url}" alt="uploaded image"/>`;
+      messages.appendChild(li);
+      messages.scrollTop = messages.scrollHeight;
+    });
+
+    uploadBtn.onclick = () => {
+      const file = imageInput.files[0];
+      if(!file) return alert('Please select an image');
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        socket.emit('image upload', { image: e.target.result, filename: file.name });
+      };
+      reader.readAsDataURL(file);
+    };
+
+    // For admin to ban users — just a prompt, can be improved
+    window.banUser = () => {
+      if(username !== 'admin') {
+        alert('You are not admin');
+        return;
+      }
+      const userToBan = prompt('Enter username to ban:');
+      if(userToBan) {
+        socket.emit('ban user', userToBan);
+      }
+    };
+
+    socket.on('user banned', (bannedName) => {
+      const li = document.createElement('li');
+      li.style.color = 'red';
+      li.textContent = `User banned: ${bannedName}`;
+      messages.appendChild(li);
+    });
+
   </script>
+
+  <button onclick="banUser()">Ban User (Admin only)</button>
 </body>
 </html>
+
