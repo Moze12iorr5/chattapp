@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Moderator Panel</title>
+</head>
+<body>
+<h1>Moderator Panel</h1>
+<p>Enter IP address to ban:</p>
+<input id="ipInput" placeholder="User IP" />
+<button id="banBtn">Ban User</button>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+
+  document.getElementById('banBtn').onclick = () => {
+    const ip = document.getElementById('ipInput').value.trim();
+    if (ip) {
+      socket.emit('ban user', ip);
+      alert('User banned: ' + ip);
+    }
+  };
+
+  socket.on('user banned', (ip) => {
+    alert('User banned: ' + ip);
+  });
+</script>
+</body>
+</html>

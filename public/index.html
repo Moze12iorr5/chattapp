@@ -1,118 +1,94 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Welcome OmeStarChat</title>
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 700px; margin: 20px auto; }
-    nav a { margin: 0 10px; }
-    #messages { list-style-type: none; padding: 0; height: 300px; overflow-y: scroll; border: 1px solid #ccc; }
-    #messages li { padding: 5px; border-bottom: 1px solid #eee; }
-    #messages li img { max-width: 150px; max-height: 150px; }
-  </style>
+<meta charset="UTF-8" />
+<title>OmeStarChat</title>
+<style>
+  body { font-family: Arial, sans-serif; }
+  #messages { list-style: none; max-height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 5px; }
+  #messages li { margin-bottom: 10px; }
+  img.chat-image { max-width: 150px; display: block; margin-top: 5px; }
+</style>
+<script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
-  <nav>
-    <a href="/">Chat</a> | 
-    <a href="/about">About</a> | 
-    <a href="/faq">FAQ</a> | 
-    <a href="/rules">Rules</a> | 
-    <a href="/contact">Contact</a>
-  </nav>
+<h1>Welcome to OmeStarChat</h1>
 
-  <h1>Welcome OmeStarChat</h1>
+<p><a href="rules.html">Rules</a> | <a href="faq.html">FAQ</a> | <a href="about.html">About</a> | <a href="contact.html">Contact</a></p>
 
-  <ul id="messages"></ul>
+<ul id="messages"></ul>
 
-  <input id="input" autocomplete="off" placeholder="Type message here..." />
-  <button id="sendBtn">Send</button>
+<input id="input" autocomplete="off" placeholder="Type your message..." />
+<button id="sendBtn">Send</button>
 
-  <hr>
+<h3>Upload Image</h3>
+<input type="file" id="imageUpload" accept="image/*" />
+<button id="uploadBtn">Upload</button>
 
-  <input type="file" id="imageInput" accept="image/*" />
-  <button id="uploadBtn">Upload Image</button>
+<script>
+  const socket = io();
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
+  let username = '';
+  while (!username) {
+    username = prompt('Enter your username:').trim();
+  }
 
-    let username = '';
-    while(!username) {
-      username = prompt('Enter your username:').trim();
+  const input = document.getElementById('input');
+  const sendBtn = document.getElementById('sendBtn');
+  const messages = document.getElementById('messages');
+  const imageUpload = document.getElementById('imageUpload');
+  const uploadBtn = document.getElementById('uploadBtn');
+
+  sendBtn.onclick = () => {
+    const text = input.value.trim();
+    if (text !== '') {
+      socket.emit('chat message', { user: username, text });
+      input.value = '';
     }
+  };
 
-    socket.emit('join', username);
+  input.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendBtn.click();
+  });
 
-    socket.on('banned', () => {
-      alert('You are banned from this chat.');
-      window.location.reload();
-    });
-
-    const input = document.getElementById('input');
-    const sendBtn = document.getElementById('sendBtn');
-    const messages = document.getElementById('messages');
-    const imageInput = document.getElementById('imageInput');
-    const uploadBtn = document.getElementById('uploadBtn');
-
-    sendBtn.onclick = () => {
-      const text = input.value.trim();
-      if(text) {
-        socket.emit('chat message', text);
-        input.value = '';
-      }
-    };
-
-    input.addEventListener('keypress', e => {
-      if(e.key === 'Enter') sendBtn.click();
-    });
-
-    socket.on('chat message', (msg) => {
+  socket.on('chat message', (msg) => {
+    if (msg.image) {
+      const li = document.createElement('li');
+      li.textContent = `${msg.user} sent an image:`;
+      const img = document.createElement('img');
+      img.src = msg.image;
+      img.className = 'chat-image';
+      li.appendChild(img);
+      messages.appendChild(li);
+      messages.scrollTop = messages.scrollHeight;
+    } else {
       const li = document.createElement('li');
       li.textContent = `${msg.user}: ${msg.text}`;
       messages.appendChild(li);
       messages.scrollTop = messages.scrollHeight;
-    });
+    }
+  });
 
-    socket.on('chat image', (msg) => {
-      const li = document.createElement('li');
-      li.innerHTML = `${msg.user}: <br><img src="${msg.url}" alt="uploaded image"/>`;
-      messages.appendChild(li);
-      messages.scrollTop = messages.scrollHeight;
-    });
+  uploadBtn.onclick = () => {
+    if (imageUpload.files.length === 0) return alert('Please select an image first!');
+    const file = imageUpload.files[0];
+    const formData = new FormData();
+    formData.append('image', file);
 
-    uploadBtn.onclick = () => {
-      const file = imageInput.files[0];
-      if(!file) return alert('Please select an image');
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        socket.emit('image upload', { image: e.target.result, filename: file.name });
-      };
-      reader.readAsDataURL(file);
-    };
-
-    // For admin to ban users — just a prompt, can be improved
-    window.banUser = () => {
-      if(username !== 'admin') {
-        alert('You are not admin');
-        return;
-      }
-      const userToBan = prompt('Enter username to ban:');
-      if(userToBan) {
-        socket.emit('ban user', userToBan);
-      }
-    };
-
-    socket.on('user banned', (bannedName) => {
-      const li = document.createElement('li');
-      li.style.color = 'red';
-      li.textContent = `User banned: ${bannedName}`;
-      messages.appendChild(li);
-    });
-
-  </script>
-
-  <button onclick="banUser()">Ban User (Admin only)</button>
+    fetch('/upload', {
+      method: 'POST',
+      body: formData
+    }).then(res => {
+      if (!res.ok) throw new Error('Upload failed');
+      return res.json();
+    }).then(data => {
+      socket.emit('chat message', {
+        user: username,
+        text: '',
+        image: `/uploads/${data.filename}`
+      });
+    }).catch(err => alert(err.message));
+  };
+</script>
 </body>
 </html>
-
