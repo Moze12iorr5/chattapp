@@ -2,88 +2,32 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>OmeStarChat</title>
+  <title>Welcome OmeStarChat</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    #messages { list-style-type: none; padding: 0; max-height: 300px; overflow-y: auto; border: 1px solid #ccc; }
-    #messages li { padding: 5px; border-bottom: 1px solid #eee; }
-    #messages li img { max-width: 200px; max-height: 150px; display: block; margin-top: 5px; }
-    #rules { background: #f9f9f9; border: 1px solid #ddd; padding: 10px; margin-bottom: 15px; }
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: auto; }
+    #messages { border: 1px solid #ccc; height: 300px; overflow-y: scroll; padding: 10px; }
+    li { margin-bottom: 10px; }
   </style>
 </head>
 <body>
-  <h1>Welcome to OmeStarChat</h1>
+  <h1>Welcome OmeStarChat</h1>
 
-  <div id="rules">
-    <strong>Rules:</strong>
-    <ul>
-      <li>No spamming or offensive language</li>
-      <li>No sharing personal info</li>
-      <li>Respect others</li>
-    </ul>
-  </div>
+  <nav>
+    <a href="/rules">Rules</a> |
+    <a href="/faq">FAQ</a> |
+    <a href="/about">About</a> |
+    <a href="/contact">Contact</a>
+  </nav>
 
   <ul id="messages"></ul>
 
-  <input id="input" autocomplete="off" placeholder="Type a message" />
+  <input id="input" autocomplete="off" placeholder="Type message..." />
   <button id="sendBtn">Send</button>
 
-  <hr />
-  <label for="imageUpload">Upload Image:</label>
-  <input type="file" id="imageUpload" accept="image/*" />
+  <br /><br />
+  <label>Upload Image: <input type="file" id="imageInput" accept="image/*" /></label>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
-
-    let username = '';
-    while (!username) {
-      username = prompt('Enter your username:').trim();
-    }
-
-    const input = document.getElementById('input');
-    const sendBtn = document.getElementById('sendBtn');
-    const messages = document.getElementById('messages');
-    const imageUpload = document.getElementById('imageUpload');
-
-    sendBtn.addEventListener('click', () => {
-      if (input.value.trim() !== '') {
-        socket.emit('chat message', { user: username, text: input.value.trim() });
-        input.value = '';
-      }
-    });
-
-    input.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') sendBtn.click();
-    });
-
-    socket.on('chat message', (msg) => {
-      const li = document.createElement('li');
-      li.textContent = `${msg.user}: ${msg.text}`;
-      messages.appendChild(li);
-      messages.scrollTop = messages.scrollHeight;
-    });
-
-    imageUpload.addEventListener('change', () => {
-      const file = imageUpload.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        socket.emit('image upload', { user: username, imageData: reader.result });
-      };
-      reader.readAsDataURL(file);
-      imageUpload.value = ''; // reset
-    });
-
-    socket.on('image upload', (data) => {
-      const li = document.createElement('li');
-      li.textContent = `${data.user} sent an image:`;
-      const img = document.createElement('img');
-      img.src = data.imageData;
-      li.appendChild(img);
-      messages.appendChild(li);
-      messages.scrollTop = messages.scrollHeight;
-    });
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>

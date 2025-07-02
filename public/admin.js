@@ -1,24 +1,24 @@
 const socket = io();
 
-const banUserBtn = document.getElementById('banUserBtn');
-const banUserInput = document.getElementById('banUserInput');
-const bannedUsersList = document.getElementById('bannedUsersList');
+const banInput = document.getElementById('banInput');
+const banBtn = document.getElementById('banBtn');
+const bannedList = document.getElementById('bannedList');
 
-// Ban a user by sending username to server
-banUserBtn.addEventListener('click', () => {
-  const username = banUserInput.value.trim();
-  if (username) {
-    socket.emit('ban user', username);
-    banUserInput.value = '';
-  }
+let bannedUsers = [];
+
+banBtn.addEventListener('click', () => {
+  const username = banInput.value.trim();
+  if (!username) return alert('Enter a username to ban');
+
+  socket.emit('ban user', username);
+  banInput.value = '';
 });
 
-// Listen for updated banned users list from server
-socket.on('update banned users', (bannedUsers) => {
-  bannedUsersList.innerHTML = '';
-  bannedUsers.forEach((user) => {
+socket.on('user banned', (username) => {
+  if (!bannedUsers.includes(username)) {
+    bannedUsers.push(username);
     const li = document.createElement('li');
-    li.textContent = user;
-    bannedUsersList.appendChild(li);
-  });
+    li.textContent = username;
+    bannedList.appendChild(li);
+  }
 });

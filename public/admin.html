@@ -2,32 +2,22 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Admin Login</title>
+  <title>Admin Panel - OmeStarChat</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 50px; }
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: auto; }
+    input, button { margin: 5px 0; padding: 5px; }
   </style>
 </head>
 <body>
-  <h1>Admin Login</h1>
-  <form id="loginForm">
-    <label>Password: <input type="password" id="adminPass" required /></label>
-    <button type="submit">Login</button>
-  </form>
-  <p id="error" style="color: red;"></p>
+  <h1>Admin Panel</h1>
+  <p>Type username to ban:</p>
+  <input id="banInput" placeholder="Username to ban" />
+  <button id="banBtn">Ban User</button>
 
-  <script>
-    const loginForm = document.getElementById('loginForm');
-    const errorP = document.getElementById('error');
-    loginForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const pass = document.getElementById('adminPass').value;
-      // Simple password check here, change 'admin123' to your secret
-      if (pass === 'admin123') {
-        window.location.href = '/admin-panel';
-      } else {
-        errorP.textContent = 'Incorrect password';
-      }
-    });
-  </script>
+  <h3>Banned users:</h3>
+  <ul id="bannedList"></ul>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="admin.js"></script>
 </body>
 </html>
